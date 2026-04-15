@@ -23,7 +23,7 @@ min_length=min_length, do_sample=False)
 st.subheader(" Summary:")
 st.success(summary[0]['summary_text'])
 else:
-st.warning(" Please enter some text to summarize.")")
+st.warning(" Please enter some text to summarize.")
 summarizer = load_summarizer()
 st.title(" AI text Summarizer")
 st.write("Enter a long text below, and get a concise summary!")
