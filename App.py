@@ -28,3 +28,4 @@ if st.button("Summarize"):
         st.success(summary[0]['summary_text'])
     else:
         st.warning("Please enter some text to summarize.")
+        
