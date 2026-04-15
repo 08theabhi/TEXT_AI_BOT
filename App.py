@@ -1,62 +1,40 @@
 import streamlit as st
-import requests
-import base64
-from PIL import Image
-import io
+from groq import Groq
 
-API_URL = "https://router.huggingface.co/hf-inference/models/Salesforce/blip-image-captioning-large"
-HEADERS = {"Authorization": "Bearer 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"}  # your token
+client = Groq(api_key="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")  # paste your Groq key here
 
-# ---- DEBUG LINE ----
-st.write("Token starts with:", HEADERS["Authorization"][:20])
-
-def image_to_text(image_bytes):
+def summarize(text, max_length, min_length):
     try:
-        encoded = base64.b64encode(image_bytes).decode("utf-8")
-        payload = {"inputs": encoded}
-        response = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-        st.write("Status code:", response.status_code)  # DEBUG
-        st.write("Raw response:", response.text[:300])   # DEBUG
-        
-        if response.status_code == 401:
-            return "❌ Invalid HuggingFace token. Please check your token."
-        elif response.status_code == 503:
-            return "⏳ Model is loading, please wait 20 seconds and try again."
-        elif response.status_code == 429:
-            return "⚠️ Too many requests. Please wait a moment and try again."
-        elif response.status_code == 404:
-            return "❌ Model not found. Check the API URL."
-        elif response.status_code != 200:
-            return f"❌ API Error: Status code {response.status_code}"
-
-        result = response.json()
-        if isinstance(result, list) and len(result) > 0:
-            return result[0].get("generated_text", "No text generated.")
-        elif isinstance(result, dict) and "error" in result:
-            return f"❌ API Error: {result['error']}"
-        else:
-            return f"Unexpected response: {result}"
-
-    except requests.exceptions.Timeout:
-        return "❌ Request timed out. Please try again."
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"You are a text summarizer. Summarize the given text in minimum {min_length} words and maximum {max_length} words. Give only the summary, nothing else."
+                },
+                {
+                    "role": "user",
+                    "content": f"Summarize this text:\n\n{text}"
+                }
+            ]
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-st.title("🖼️ Image to Text Converter")
-st.write("Upload an image and AI will describe what it sees!")
+# ---- UI ----
+st.title("🤖 AI Text Summarizer")
+st.write("Enter a long text below, and get a concise summary!")
 
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+long_text = st.text_area("Enter text to summarize:", height=200)
+max_length = st.slider("Max Summary Length (words)", min_value=50, max_value=300, value=130)
+min_length = st.slider("Min Summary Length (words)", min_value=10, max_value=50, value=30)
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-
-    img_bytes = io.BytesIO()
-    image.save(img_bytes, format="PNG")
-    img_bytes = img_bytes.getvalue()
-
-    if st.button("Generate Text"):
-        with st.spinner("Analyzing image..."):
-            result = image_to_text(img_bytes)
-        st.subheader("📝 Generated Description:")
+if st.button("Summarize"):
+    if long_text.strip():
+        with st.spinner("Generating summary..."):
+            result = summarize(long_text, max_length, min_length)
+        st.subheader("📝 Summary:")
         st.success(result)
+    else:
+        st.warning("⚠️ Please enter some text to summarize.")
